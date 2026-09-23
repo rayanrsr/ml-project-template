@@ -82,9 +82,9 @@ evaluate-docker: build-docker
 # in your GitHub repository (you then need to setup the GitHub Pages to use the gh-pages branch)
 [group('docs')]
 deploy-pages:
-	uv run --no-sync --extra docs mkdocs build -f docs/mkdocs.yml && uv run --no-sync --extra docs mkdocs gh-deploy -f docs/mkdocs.yml
+	uv run --extra docs mkdocs build -f docs/mkdocs.yml && uv run --extra docs mkdocs gh-deploy -f docs/mkdocs.yml
 
 # This is to run the documentation locally to see how it looks
 [group('docs')]
 serve-docs:
-	uv run --no-sync --extra docs mkdocs build -f docs/mkdocs.yml && uv run --no-sync --extra docs mkdocs serve -f docs/mkdocs.yml
+	uv run --extra docs mkdocs build -f docs/mkdocs.yml && uv run --extra docs mkdocs serve -f docs/mkdocs.yml

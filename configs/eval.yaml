@@ -11,6 +11,9 @@ defaults:
   - extras: default
   - hydra: default
 
+  # debugging config (enable through command line, e.g. `python eval.py debug=default)`)
+  - debug: null
+
 task_name: "eval"
 
 tags: ["dev"]

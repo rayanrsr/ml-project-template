@@ -35,11 +35,14 @@ WORKDIR /app
 
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
+# NB: the home directory must be writable (and is also used as uv's cache): with the usual
+# `--home "/nonexistent"`, every `uv run` inside the container died with
+# "Failed to initialize cache at `/nonexistent/.cache/uv`: Permission denied".
 ARG UID=10001
 RUN adduser \
   --disabled-password \
   --gecos "" \
-  --home "/nonexistent" \
+  --home "/app" \
   --shell "/sbin/nologin" \
   --no-create-home \
   --uid "${UID}" \
@@ -47,6 +50,9 @@ RUN adduser \
 
 # the app must be able to write its outputs (logs, checkpoints, downloaded data) in here
 RUN chown appuser:appuser /app
+
+# uv needs a writable cache even with `--no-sync`
+ENV UV_CACHE_DIR=/app/.cache/uv
 
 # Which torch build to install: `cpu` (default) or `gpu`
 ARG TORCH_EXTRA=cpu

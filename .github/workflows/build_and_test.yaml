@@ -31,10 +31,14 @@ jobs:
       - name: Run tests
         run: uv run --no-sync pytest
 
-      - name: Smoke test - train and evaluate one batch on CPU
+      - name: Smoke test - train and evaluate on CPU
         # This is what actually proves the template works: it resolves the hydra configs,
-        # instantiates the datamodule/model (torchvision import, torchtyping annotations) and
-        # runs a forward/backward pass. It used to be broken while the tests stayed green.
+        # instantiates the datamodule/model (torchvision import, torchtyping annotations), runs a
+        # forward/backward pass and reloads a checkpoint. It used to be broken while the tests
+        # stayed green.
         run: |
+          # 1. fast dev run: full config path, one batch, no checkpoint written
           uv run --no-sync src/train.py debug=fdr
-          uv run --no-sync src/eval.py debug=fdr ckpt_path="$(pwd)/checkpoints/last.ckpt"
+          # 2. a real (tiny) run so that `eval` has a checkpoint to restore
+          uv run --no-sync src/train.py model_compile=false trainer.max_epochs=1 +trainer.limit_train_batches=0.02 +trainer.limit_val_batches=0.05
+          uv run --no-sync src/eval.py model_compile=false ckpt_path="$PWD/checkpoints/last.ckpt" +trainer.limit_test_batches=0.05
