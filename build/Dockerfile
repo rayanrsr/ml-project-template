@@ -33,6 +33,13 @@ ENV UV_NO_SYNC=false
 
 WORKDIR /app
 
+# torch.compile (inductor) compiles generated kernels at runtime, which needs a C++ toolchain.
+# Without it the default config fails with
+# "InvalidCxxCompiler: No working C++ compiler found in torch._inductor.config.cpp.cxx: (None, 'g++')".
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends gcc g++ \
+  && rm -rf /var/lib/apt/lists/*
+
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
 ARG UID=10001
