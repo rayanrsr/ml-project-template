@@ -35,9 +35,6 @@ WORKDIR /app
 
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
-# NB: the home directory must be writable (and is also used as uv's cache): with the usual
-# `--home "/nonexistent"`, every `uv run` inside the container died with
-# "Failed to initialize cache at `/nonexistent/.cache/uv`: Permission denied".
 ARG UID=10001
 RUN adduser \
   --disabled-password \
@@ -48,11 +45,13 @@ RUN adduser \
   --uid "${UID}" \
   appuser
 
-# the app must be able to write its outputs (logs, checkpoints, downloaded data) in here
+# Everything under /app belongs to the app user: it must be able to write its outputs (logs,
+# checkpoints, downloaded data) and uv's cache, and the whole install is done *as* that user so
+# that no root-owned file ends up in the image ("failed to open file
+# `/app/.cache/uv/sdists-v9/.git`: Permission denied").
 RUN chown appuser:appuser /app
-
-# uv needs a writable cache even with `--no-sync`
 ENV UV_CACHE_DIR=/app/.cache/uv
+USER appuser
 
 # Which torch build to install: `cpu` (default) or `gpu`
 ARG TORCH_EXTRA=cpu
@@ -61,17 +60,14 @@ ARG TORCH_EXTRA=cpu
 # cached when the source code changes. Without `--extra`, no torch is installed at all and the
 # training/eval/serve scripts cannot even start.
 COPY --chown=appuser:appuser pyproject.toml uv.lock README.md ./
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/app/.cache/uv \
   uv sync --locked --no-install-project --extra ${TORCH_EXTRA}
 
 # Copy the source code into the container and install the project itself (so that `import src...`
 # resolves inside the image).
 COPY --chown=appuser:appuser . .
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/app/.cache/uv \
   uv sync --locked --extra ${TORCH_EXTRA}
-
-# Switch to the non-privileged user to run the application.
-USER appuser
 
 # Serve the model on port 8000 (requires a trained checkpoint, see `just train`)
 CMD ["uv", "run", "--no-sync", "src/serve.py"]
