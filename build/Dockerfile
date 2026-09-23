@@ -60,14 +60,15 @@ ARG TORCH_EXTRA=cpu
 # cached when the source code changes. Without `--extra`, no torch is installed at all and the
 # training/eval/serve scripts cannot even start.
 COPY --chown=appuser:appuser pyproject.toml uv.lock README.md ./
-RUN --mount=type=cache,target=/app/.cache/uv \
-  uv sync --locked --no-install-project --extra ${TORCH_EXTRA}
+# NB: no `--mount=type=cache` here: BuildKit creates cache mounts owned by root, and uv runs as
+# `appuser` (add `,uid=10001,gid=10001` to the mount options if you want one back). Layer caching
+# already avoids re-installing the dependencies unless pyproject.toml/uv.lock change.
+RUN uv sync --locked --no-install-project --extra ${TORCH_EXTRA}
 
 # Copy the source code into the container and install the project itself (so that `import src...`
 # resolves inside the image).
 COPY --chown=appuser:appuser . .
-RUN --mount=type=cache,target=/app/.cache/uv \
-  uv sync --locked --extra ${TORCH_EXTRA}
+RUN uv sync --locked --extra ${TORCH_EXTRA}
 
 # Serve the model on port 8000 (requires a trained checkpoint, see `just train`)
 CMD ["uv", "run", "--no-sync", "src/serve.py"]
