@@ -1,6 +1,7 @@
 """Mnist simple model."""
 
-from typing import Any, TypeVar
+from collections.abc import Callable
+from typing import Any
 
 import torch
 from lightning import LightningModule
@@ -9,9 +10,6 @@ from torchmetrics.classification.accuracy import Accuracy
 from torchtyping import TensorType, patch_typeguard
 from typeguard import typechecked
 
-# Define a dimension name properly
-
-Batch = TypeVar("Batch")
 # Ensure typeguard is patched with torchtyping
 patch_typeguard()
 
@@ -52,22 +50,22 @@ class MNISTLitModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler._LRScheduler | None,
-        compile_model: bool,
+        optimizer: Callable[..., torch.optim.Optimizer],
+        scheduler: Callable[..., torch.optim.lr_scheduler._LRScheduler] | None,
     ) -> None:
         """Initialize a `MNISTLitModule`.
 
         Args:
             net: The model to train.
-            optimizer: The optimizer to use for training.
-            scheduler: The learning rate scheduler to use for training.
-            compile_model: Whether or not compile the model.
+            optimizer: Factory of the optimizer to use for training (hydra `_partial_`).
+            scheduler: Factory of the learning rate scheduler to use for training (hydra `_partial_`).
         """
         super().__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
+        # NB: `net` must stay in the hyperparameters: `MNISTLitModule.load_from_checkpoint`
+        # (used by serve.py) rebuilds the module from them.
         self.save_hyperparameters(logger=False)
 
         self.net = net
@@ -89,7 +87,7 @@ class MNISTLitModule(LightningModule):
         self.val_acc_best = MaxMetric()
 
     @typechecked
-    def forward(self, x: TensorType[Batch, 1, 28, 28]) -> TensorType[Batch, 10]:  # ty
+    def forward(self, x: TensorType[Any, 1, 28, 28]) -> TensorType[Any, 10]:
         """Perform a forward pass through the model.
 
         Args:
@@ -110,8 +108,8 @@ class MNISTLitModule(LightningModule):
 
     @typechecked
     def model_step(
-        self, x: TensorType[Batch, 1, 28, 28], y: TensorType[Batch]
-    ) -> tuple[TensorType[()], TensorType[()], TensorType[()]]:
+        self, x: TensorType[Any, 1, 28, 28], y: TensorType[Any]
+    ) -> tuple[TensorType[()], TensorType[Any], TensorType[Any]]:
         """Perform a single model step.
 
         Args:
@@ -120,9 +118,9 @@ class MNISTLitModule(LightningModule):
 
         Returns:
             A tuple containing:
-                - loss: A tensor of shape (batch_size,)
-                - preds: A tensor of predicted class indices (batch_size,)
-                - targets: A tensor of true class labels (batch_size,)
+                - loss: A scalar tensor
+                - preds: A tensor of predicted class indices (batch,)
+                - targets: A tensor of true class labels (batch,)
         """
         logits = self.forward(x)
         loss = self.criterion(logits, y)
@@ -197,19 +195,6 @@ class MNISTLitModule(LightningModule):
 
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends."""
-        pass
-
-    def setup(self, stage: str) -> None:
-        """Lightning hook that is called at the beginning of fit (train + validate), validate, test, or predict.
-
-        This is a good hook when you need to build models dynamically or adjust something about
-        them. This hook is called on every process when using DDP.
-
-        Args:
-            stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
-        """
-        if self.hparams["compile_model"] and stage == "fit":
-            self.net = torch.compile(self.net)  # type: ignore
 
     def configure_optimizers(self) -> dict[str, Any]:  # type: ignore
         """Choose what optimizers and learning-rate schedulers to use in your optimization.
@@ -222,8 +207,7 @@ class MNISTLitModule(LightningModule):
         Returns:
             A dict containing the configured optimizers and learning-rate schedulers to be used for training.
         """
-        assert self.trainer.model is not None, "Model is not compiled yet."
-        optimizer = self.hparams["optimizer"](params=self.trainer.model.parameters())
+        optimizer = self.hparams["optimizer"](params=self.parameters())
         if self.hparams["scheduler"] is not None:
             scheduler = self.hparams["scheduler"](optimizer=optimizer)
             return {

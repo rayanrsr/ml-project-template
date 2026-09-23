@@ -1,9 +1,10 @@
 """PyTorch Lightning DataModule for loading dataset using Polars."""
 
+from typing import Any
+
 import polars as pl
 import torch
-from pytorch_lightning import LightningDataModule
-from sklearn.model_selection import train_test_split
+from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -22,8 +23,10 @@ class PolarsDataset(Dataset):
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """Return the features and label for the given index."""
-        row = self.df[idx]
-        features = torch.tensor([val for col, val in row.item() if col != self.output_column], dtype=torch.float32)
+        row = self.df.row(idx, named=True)
+        features = torch.tensor(
+            [value for column, value in row.items() if column != self.output_column], dtype=torch.float32
+        )
         label = torch.tensor(row[self.output_column], dtype=torch.long)
         return features, label
 
@@ -33,7 +36,12 @@ class PolarsDataModule(LightningDataModule):
     """PyTorch Lightning DataModule for loading dataset using Polars."""
 
     def __init__(
-        self, data_path: str, output_column: str, batch_size: int = 32, num_workers: int = 0, test_size: float = 0.2
+        self,
+        data_path: str,
+        output_column: str,
+        batch_size: int = 32,
+        num_workers: int = 0,
+        test_size: float = 0.2,
     ) -> None:
         """Initialize the PolarsDataModule.
 
@@ -50,25 +58,29 @@ class PolarsDataModule(LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.test_size = test_size
-        self.df: pl.DataFrame
+        self.train_dataset: Dataset | None = None
+        self.val_dataset: Dataset | None = None
 
-    def setup(self, stage: str = "") -> None:
+    def setup(self, stage: str | None = None) -> None:
         """Load and split the dataset into train and validation sets."""
         # Load dataset using Polars
-        self.df = pl.read_csv(self.data_path)
+        df = pl.read_csv(self.data_path)
 
-        # Split the data into train and validation sets
-        train_df, val_df = train_test_split(self.df, test_size=self.test_size, random_state=42)
+        # Shuffle deterministically, then split the dataframe in two contiguous parts
+        df = df.sample(fraction=1.0, shuffle=True, seed=42)
+        n_val = int(len(df) * self.test_size)
 
-        self.train_dataset = PolarsDataset(pl.DataFrame(train_df), output_column=self.output_column)
-        self.val_dataset = PolarsDataset(pl.DataFrame(val_df), output_column=self.output_column)
+        self.train_dataset = PolarsDataset(df.head(len(df) - n_val), output_column=self.output_column)
+        self.val_dataset = PolarsDataset(df.tail(n_val), output_column=self.output_column)
 
-    def train_dataloader(self) -> DataLoader:
+    def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader."""
+        assert self.train_dataset is not None, "Call setup() before requesting a dataloader."
         return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
 
-    def val_dataloader(self) -> DataLoader:
+    def val_dataloader(self) -> DataLoader[Any]:
         """Create and return the validation dataloader."""
+        assert self.val_dataset is not None, "Call setup() before requesting a dataloader."
         return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
 
 

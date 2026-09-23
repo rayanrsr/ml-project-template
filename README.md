@@ -1,17 +1,17 @@
 <div align="center">
 
-<img width="200" src="https://github.com/rayanramoul/ml-project-template/blob/master/assets/img/icon.png?raw=true">
+<img width="200" src="https://github.com/rayanrsr/ml-project-template/blob/master/assets/img/icon.png?raw=true">
 </img>
 <h1>Machine Learning Project Template</h1>
 
-[![python](https://img.shields.io/badge/-Python_3.8_%7C_3.9_%7C_3.10-blue?logo=python&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![python](https://img.shields.io/badge/-Python_3.12-blue?logo=python&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![pytorch](https://img.shields.io/badge/PyTorch_2.0+-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/get-started/locally/)
 [![lightning](https://img.shields.io/badge/-Lightning_2.0+-792ee5?logo=pytorchlightning&logoColor=white)](https://pytorchlightning.ai/)
 [![hydra](https://img.shields.io/badge/Config-Hydra_1.3-89b8cd)](https://hydra.cc/)
 [![Linter: Ruff](https://img.shields.io/badge/Linter-Ruff-brightgreen?style=flat-square)](https://github.com/charliermarsh/ruff)
 <br>
 
-Click on [<kbd>Use this template</kbd>](https://github.com/rayanramoul/ml-project-template/generate) to start your own project! or go to the [Documentation](https://rayanramoul.github.io/ml-project-template/) for more information.
+Click on [<kbd>Use this template</kbd>](https://github.com/rayanrsr/ml-project-template/generate) to start your own project! or go to the [Documentation](https://rayanrsr.github.io/ml-project-template/) for more information.
 
 <br>
 A template for machine learning or deep learning projects.
@@ -45,11 +45,19 @@ A template for machine learning or deep learning projects.
 
 - [ ] Use this repository as a template
 - [ ] Clone your repository
-- [ ] Run `just install` to install the dependencies
+- [ ] Run `just install` to install the dependencies (add `--extra cpu`/`--extra gpu` for torch, see below)
 - [ ] Add your model which inherits from `LightningModule` in `src/models`
 - [ ] Add your dataset which inherits from `Datamodule` in `src/data`
 - [ ] Add associated yaml configuration files in `configs/` folder following existing examples
 - [ ] Read the commands in the justfile to understand the available commands you can use
+
+`just install` gets you the base dependencies; torch is optional and comes from an extra:
+
+```bash
+just install                     # base dependencies only
+uv sync --locked --extra cpu     # + torch/torchvision (CPU wheels)
+uv sync --locked --extra gpu     # + torch/torchvision (CUDA 11.8 wheels)
+```
 
 ## 🤠Tips and Tricks
 
@@ -104,7 +112,7 @@ Read more about Hydra in the [official documentation](https://hydra.cc/docs/intr
 
 - Typing your functions and classes with `TorchTyping` for better type checking (in addition to python's typing module)
 - Docstring your functions and classes, it is even more important as it is used to generate the documentation with Mkdocs
-- Use the `just` commands to run your code, it is easier and faster than writing the full command (and check the Makefile for all available commands 😉)
+- Use the `just` commands to run your code, it is easier and faster than writing the full command (and check the justfile for all available commands 😉)
 - [Use the pre-commit hooks](https://pre-commit.com/) to ensure your code is formatted correctly and is of good quality
 - [UV](https://docs.astral.sh/uv/ ) is powerful (multi-thread, package graph solving, rust backend, etc.) use it as much as you can.
 - If you have a lot of data, use Polars for faster and more efficient dataframe processing.
@@ -123,7 +131,7 @@ And to deploy it to Github pages (youn need to enable Pages in your repository c
 gh-pages branch):
 
 ```bash
-just pages-deploy # It will create a gh-pages branch and push the documentation to it
+just deploy-pages # It will create a gh-pages branch and push the documentation to it
 ```
 
 ### 🎓 Github Templates
@@ -144,7 +152,7 @@ After selecting the dataset and notebook, potential steps for the junior can be:
 - Implement unit tests
 - Create a CI/CD pipeline with Github Actions
 - Dockerize the project
-- Create a Makefile with useful commands
+- Create a justfile with useful commands
 - Implement the documentation with Mkdocs
 (All of this while following the best practices and tools provided in the template and PEP8)
 
@@ -154,7 +162,7 @@ If any struggle is encountered, the junior can refer to the provided examples in
 
 ```
 .
-├── commit-template.txt # use this file to set your commit message template, with make configure-commit template
+├── assets/commit-template.txt # git commit message template, installed with `just configure-commit-template`
 ├── configs # configuration files for hydra
 │   ├── callbacks # configuration files for callbacks
 │   ├── data # configuration files for datamodules
@@ -170,7 +178,9 @@ If any struggle is encountered, the junior can refer to the provided examples in
 │   ├── trainer # configuration files for trainers (cpu, gpu, tpu)
 │   └── train.yaml # configuration file for training
 ├── data # data folder (to store potentially downloaded datasets)
-├── justfile # makefile equivalents that contains useful commands for the project
+├── build # Dockerfile and docker-compose to build/run the project
+├── docs # mkdocs documentation sources
+├── justfile # just recipes, the equivalent of a makefile
 ├── notebooks # notebooks folder
 ├── pyproject.toml # pyproject.toml file for uv package manager
 ├── README.md # this file

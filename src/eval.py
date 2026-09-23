@@ -1,18 +1,20 @@
 """Main evaluation script."""
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import hydra
+import lightning
 import torch
 
 if TYPE_CHECKING:
-    from lightning import LightningDataModule, LightningModule, Trainer
+    from lightning import Callback, LightningDataModule, LightningModule, Trainer
     from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
 from src.utils import (
     RankedLogger,
     extras,
+    instantiate_callbacks,
     instantiate_loggers,
     log_hyperparameters,
     task_wrapper,
@@ -44,18 +46,24 @@ def evaluate(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     if cfg.get("model_compile", False):
         log.info("Compiling model...")
-        torch.compile(model)
+        # NB: the result must be re-assigned, otherwise the compiled module is discarded
+        # and torch.compile has no effect at all.
+        model = cast(lightning.LightningModule, torch.compile(model))
+
+    log.info("Instantiating callbacks...")
+    callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
     log.info("Instantiating loggers...")
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))
 
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=logger)
+    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
 
     object_dict = {
         "cfg": cfg,
         "datamodule": datamodule,
         "model": model,
+        "callbacks": callbacks,
         "logger": logger,
         "trainer": trainer,
     }

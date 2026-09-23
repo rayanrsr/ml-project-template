@@ -14,7 +14,6 @@ for path in src_root.glob("**/*.py"):
         continue
     doc_path = Path("api", path.relative_to(src_root)).with_suffix(".md")
 
-    if "seqly" not in str(path) and "__init__" not in str(path):
-        with mkdocs_gen_files.open(doc_path, "w") as f:
-            ident = ".".join(path.with_suffix("").parts)
-            print("::: " + ident, file=f)
+    with mkdocs_gen_files.open(doc_path, "w") as f:
+        ident = ".".join(path.with_suffix("").parts)
+        print("::: " + ident, file=f)

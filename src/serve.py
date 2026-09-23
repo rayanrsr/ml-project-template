@@ -7,6 +7,7 @@ from omegaconf import DictConfig
 
 from src.utils import (
     RankedLogger,
+    extras,
     task_wrapper,
 )
 
@@ -19,9 +20,6 @@ def serve(cfg: DictConfig) -> None:
 
     Args:
         cfg: A DictConfig configuration composed by Hydra.
-
-    Returns:
-        A tuple with metrics and dict with all instantiated objects.
     """
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
@@ -42,11 +40,14 @@ def main(cfg: DictConfig) -> None:
     """Main entry point for serving.
 
     Args:
-        cfg: DictConfig configuration composed by Hydra.
+        cfg: A DictConfig configuration composed by Hydra.
 
     Returns:
         Optional[float] with optimized metric value.
     """
+    # apply extra utilities (print config tree, enforce tags, ...)
+    extras(cfg)
+
     serve(cfg)
 
 

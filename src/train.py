@@ -1,6 +1,6 @@
 """Main training script."""
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import hydra
 import lightning
@@ -50,7 +50,9 @@ def train(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     if cfg.get("model_compile", False):
         log.info("Compiling model...")
-        torch.compile(model)
+        # NB: the result must be re-assigned, otherwise the compiled module is discarded
+        # and torch.compile has no effect at all.
+        model = cast(lightning.LightningModule, torch.compile(model))
 
     log.info("Instantiating callbacks...")
     callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
