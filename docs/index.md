@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="200" src="https://github.com/rayanramoul/ml-project-template/blob/master/assets/img/icon.png?raw=true">
+<img width="200" src="https://github.com/rayanrsr/ml-project-template/blob/master/assets/img/icon.png?raw=true">
 </img>
 <h1>Machine Learning Project Template</h1>
 
@@ -36,11 +36,11 @@ A template for machine learning or deep learning projects.
 
 - [ ] Use this repository as a template
 - [ ] Clone your repository
-- [ ] Run `just install` to install the dependencies
+- [ ] Run `just install` to install the dependencies (add `--extra cpu`/`--extra gpu` for torch, see below)
 - [ ] Add your model which inherits from `LightningModule` in `src/models`
 - [ ] Add your dataset which inherits from `Datamodule` in `src/data`
 - [ ] Add associated yaml configuration files in `configs/` folder following existing examples
-- [ ] Read the commands in the Makefile to understand the available commands you can use
+- [ ] Read the commands in the justfile to understand the available commands you can use
 
 ## 🤠Tips and Tricks
 
@@ -114,7 +114,7 @@ And to deploy it to Github pages (youn need to enable Pages in your repository c
 gh-pages branch):
 
 ```bash
-just pages-deploy # It will create a gh-pages branch and push the documentation to it
+just deploy-pages # It will create a gh-pages branch and push the documentation to it
 ```
 
 ### 🎓 Github Templates
@@ -135,7 +135,7 @@ After selecting the dataset and notebook, potential steps for the junior can be:
 - Implement unit tests
 - Create a CI/CD pipeline with Github Actions
 - Dockerize the project
-- Create a Makefile with useful commands
+- Create a justfile with useful commands
 - Implement the documentation with Mkdocs
 (All of this while following the best practices and tools provided in the template and PEP8)
 
@@ -145,7 +145,7 @@ If any struggle is encountered, the junior can refer to the provided examples in
 
 ```
 .
-├── commit-template.txt # use this file to set your commit message template, with make configure-commit template
+├── assets/commit-template.txt # git commit message template, installed with `just configure-commit-template`
 ├── configs # configuration files for hydra
 │   ├── callbacks # configuration files for callbacks
 │   ├── data # configuration files for datamodules

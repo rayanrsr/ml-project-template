@@ -24,7 +24,15 @@ jobs:
         with:
           context: .
           file: build/Dockerfile
+          # `cpu` so that the CI does not need to download the (much bigger) CUDA wheels
+          build-args: |
+            TORCH_EXTRA=cpu
           push: false
-          tags: myapp:latest
+          load: true
+          tags: lightning-base:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Smoke test - the image must be able to run the training script
+        run: |
+          docker run --rm lightning-base:latest uv run --no-sync src/train.py debug=fdr

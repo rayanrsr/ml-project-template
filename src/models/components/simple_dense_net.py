@@ -1,5 +1,7 @@
 """Simple dense neural network."""
 
+from typing import cast
+
 import torch
 from torch import nn
 
@@ -48,12 +50,15 @@ class SimpleDenseNet(nn.Module):
         Returns:
             A tensor of predictions.
         """
-        batch_size, channels, width, height = x.size()
+        batch_size, _, _, _ = x.size()
 
         # (batch, 1, width, height) -> (batch, 1*width*height)
         x = x.view(batch_size, -1)
 
-        return torch.tensor(self.model(x))
+        # NB: never wrap the output in `torch.tensor(...)` here: that detaches the
+        # tensor from the autograd graph and training then fails with
+        # "element 0 of tensors does not require grad and does not have a grad_fn".
+        return cast(torch.Tensor, self.model(x))
 
 
 if __name__ == "__main__":

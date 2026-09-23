@@ -138,45 +138,47 @@ def file_lock(filename: Path, mode: str = "r") -> Any:
 
     particularly useful for shared resources in multi-process environments (multi GPU/TPU training).
 
+    The file is only used as a lock handle: it is created if it does not exist and is never
+    truncated. Note that this relies on `fcntl`, so it is POSIX-only.
+
     Args:
         filename: Path to the file to lock
-        mode: The mode to open the file with, either "r" or "w"
+        mode: The mode to open the file with, either "r" (shared lock) or "w" (exclusive lock)
 
     Raises:
         ValueError: If the mode is invalid (neither "r" nor "w")
     """
-    with open(filename, mode) as f:
+    if mode not in ("r", "w"):
+        raise ValueError("Expected mode 'r' or 'w'.")  # noqa: TRY003
+
+    # open in append mode: it creates the file if needed without truncating its content
+    with open(filename, "a+") as f:
         try:
-            match mode:
-                case "r":
-                    fcntl.flock(f.fileno(), fcntl.LOCK_SH)
-                case "w":
-                    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-                case _:
-                    raise ValueError("Expected mode 'r' or 'w'.")  # noqa
+            fcntl.flock(f.fileno(), fcntl.LOCK_SH if mode == "r" else fcntl.LOCK_EX)
             yield f
         finally:
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 
-@contextlib.contextmanager
 def file_lock_operation(file_name: str, operation: Callable) -> Any:
     """This function is used to perform an operation on a file while acquiring a lock on it.
 
-    The lock is acquired using the `file_lock` context manager, and based on a file stored in a temporary folder
+    The lock is acquired using the `file_lock` context manager, based on a file stored in the
+    system temporary folder with a stable name, so that every process contends on the same
+    file (a per-call temporary directory would give each process its own lock file, and hence
+    no mutual exclusion at all).
 
     Args:
-        file_name: Path to the file to lock
+        file_name: Name of the lock file, shared by all processes
         operation: The operation to perform on the file
 
     Returns:
         The result of the operation
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        file_path = Path(temp_dir) / file_name
-        with file_lock(file_path, mode="w"):
-            result = operation(file_path)
-        return result
+    file_path = Path(tempfile.gettempdir()) / file_name
+    with file_lock(file_path, mode="w"):
+        result = operation(file_path)
+    return result
 
 
 def fetch_data(url: str) -> dict[str, Any] | None:

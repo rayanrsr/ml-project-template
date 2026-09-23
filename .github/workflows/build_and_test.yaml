@@ -10,7 +10,9 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-
+    env:
+      # the configs resolve ${oc.env:PROJECT_ROOT} for all the project paths
+      PROJECT_ROOT: ${{ github.workspace }}
     steps:
       - name: Checkout your repo 📦
         uses: actions/checkout@v4
@@ -18,15 +20,21 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
-          version: "0.4.24" # Pin to a specific uv version
-          enable-cache: true # Enable caching for uv
+          # NB: do NOT pin an old version here: this project uses `[tool.uv] conflicts` and
+          # per-extra `[tool.uv.sources]`, which uv < 0.5 cannot even parse.
+          enable-cache: true
           cache-dependency-glob: "uv.lock"
 
-      - name: Set up Python
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
       - name: Sync project dependencies
-        run: uv sync --extra cpu --extra test
+        run: uv sync --locked --extra cpu --extra test
 
       - name: Run tests
-        run: export PYTHONPATH="$PYTHONPATH:$PWD" && uv run pytest # Use uv to run pytest on the tests directory
+        run: uv run --no-sync pytest
+
+      - name: Smoke test - train and evaluate one batch on CPU
+        # This is what actually proves the template works: it resolves the hydra configs,
+        # instantiates the datamodule/model (torchvision import, torchtyping annotations) and
+        # runs a forward/backward pass. It used to be broken while the tests stayed green.
+        run: |
+          uv run --no-sync src/train.py debug=fdr
+          uv run --no-sync src/eval.py debug=fdr ckpt_path="$(pwd)/checkpoints/last.ckpt"

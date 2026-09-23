@@ -1,5 +1,7 @@
+# the interpreter used to create the pre-commit hook environments: keep it in sync with
+# `requires-python` in pyproject.toml
 default_language_version:
-  python: python3.10
+  python: python3.12
 
 default_stages: [pre-commit]
 
@@ -7,7 +9,7 @@ exclude: "notebooks/"
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.4
+    rev: v0.9.10
     hooks:
       - id: ruff
         types_or: [python, pyi, jupyter]
@@ -20,7 +22,7 @@ repos:
         types_or: [python, pyi, jupyter]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: debug-statements
       - id: requirements-txt-fixer # order requirements alphabetically
@@ -32,9 +34,8 @@ repos:
       - id: check-merge-conflict # Check for files that contain merge conflict strings
       - id: check-yaml # Check yaml files
 
+        # `--unsafe` is required by docs/mkdocs.yml, which uses `!!python/name:` tags
         args: ["--unsafe"]
-
-        exclude: "^app/deployment/charts/"
       - id: end-of-file-fixer # Ensure that a file is either empty, or ends with one newline
       - id: mixed-line-ending # Replace or checks mixed line ending
       - id: trailing-whitespace # This hook trims trailing whitespace
@@ -42,6 +43,7 @@ repos:
       - id: check-json # Attempts to load all json files to verify syntax.
       - id: detect-private-key # Checks for the existence of private keys.
       - id: check-added-large-files # Check if any large file is added
+        args: ["--maxkb=1024"]
 
   - repo: local
     # We do not use pre-commit/mirrors-mypy, as it comes with opinionated defaults (like --ignore-missing-imports)
@@ -50,20 +52,27 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: "uv run --extra lint mypy src/ tests/ --config-file pyproject.toml"
+        entry: "uv run --no-sync --extra lint mypy src/ tests/ --config-file pyproject.toml"
         language: system # Run the hook in the system environment and do not re-create a virtual environment
         types: [python] # Trigger hook only for commits updating Python files
         require_serial: true # Use require_serial so that script is only called once per commit
         pass_filenames: false # Do no pass filenames to the entry command
 
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v1.2.0
+    rev: v4.0.0
     hooks:
       - id: conventional-pre-commit
         stages:
           - commit-msg
 
-  - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.5.20
+  - repo: local
     hooks:
+      # `uv lock --locked` is run with the *local* uv instead of a pinned hook version: the hook
+      # used to pin its own uv (astral-sh/uv-pre-commit), and a uv older than the one that wrote
+      # uv.lock rejects the lockfile -> the hook failed on every dependabot branch.
       - id: uv-lock
+        name: uv-lock
+        entry: uv lock --locked
+        language: system
+        files: ^(pyproject\.toml|uv\.lock)$
+        pass_filenames: false

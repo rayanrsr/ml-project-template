@@ -1,7 +1,7 @@
 [project]
 name = "project-template"
 version = "0.1.0"
-description = "Add your description here"
+description = "A template for machine learning projects: Lightning + Hydra + uv"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -16,11 +16,11 @@ dependencies = [
   "wandb>=0.18.3",
   "pandas>=2.2.3",
   "litserve>=0.2.3",
-  "typeguard",
+  "typeguard>=2.13.3",
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=6.2.4"]
+test = ["pytest>=8.3.3"]
 docs = [
   "mkdocs-autorefs==1.2.0",
   "mkdocs-gen-files==0.5.0",
@@ -32,7 +32,7 @@ docs = [
   "mkdocstrings-python==1.12.1",
   "mkdocstrings==0.26.2",
   "pymdown-extensions==10.11.2",
-  "mkdocs-same-dir",
+  "mkdocs-same-dir>=0.1.3",
 ]
 lint = [
   "pre-commit>=4.0.1",
@@ -43,26 +43,24 @@ lint = [
   "types-requests>=2.31.0.6",
   "types-tqdm>=4.67.0.20241221",
 ]
-cpu = ["torch>=2.5.0", "torchtyping>=0.1.5", "torchvision"]
-gpu = ["torch>=2.5.0", "torchtyping>=0.1.5", "torchvision"]
+# torch is capped below 2.7 on purpose: torchtyping 0.1.5 (unmaintained since 2022) relies on
+# `Tensor.names`, which newer torch versions no longer expose, so every `@typechecked` tensor
+# annotation raises `AttributeError: 'Tensor' object has no attribute 'names'`.
+# Drop the cap (or drop torchtyping) once the tensor typing is migrated to jaxtyping/shapeguard.
+cpu = ["torch>=2.5,<2.7", "torchtyping>=0.1.5", "torchvision>=0.20.1"]
+gpu = ["torch>=2.5,<2.7", "torchtyping>=0.1.5", "torchvision>=0.20.1"]
 
+[dependency-groups]
+dev = ["pytest>=8.3.3"]
 
 [tool.uv]
-dev-dependencies = ["pytest>=8.3.3"]
+package = true # installs the project itself, so `import src...` works from anywhere (scripts, tests, docker)
 
-prerelease = "allow"
-find-links = [
-  "https://storage.googleapis.com/jax-releases/jax_releases.html",
-  "https://storage.googleapis.com/jax-releases/libtpu_releases.html",
-  "https://storage.googleapis.com/jax-releases/jax_cuda_releases.html",
-  "https://storage.googleapis.com/libtpu-releases/index.html",
-]
-
-conflicts = [ # so uv will resolve the groups independently
+# The `cpu` and `gpu` extras cannot be resolved together (torch comes from a different index),
+# so uv resolves them independently.
+conflicts = [
   [{ extra = "gpu" }, { extra = "cpu" }],
 ]
-
-package = true # This makes uv automatically add deepchain_mrna to PYTHONPATH
 
 [[tool.uv.index]]
 name = "pytorch-cuda11"
@@ -80,15 +78,28 @@ torch = [
 
   { index = "pytorch-cpu", extra = "cpu" },
 ]
+# torchvision must come from the *same* index as torch: the PyPI wheels are built against a
+# different CUDA runtime than the cu118 ones, and mixing them fails at import time with
+# `RuntimeError: operator torchvision::nms does not exist`.
+torchvision = [
+  { index = "pytorch-cuda11", extra = "gpu" },
+
+  { index = "pytorch-cpu", extra = "cpu" },
+]
 
 
 [build-system]
-requires = ["setuptools>=42"]
+requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 #mypy_path = ""
 warn_redundant_casts = true
 warn_return_any = true

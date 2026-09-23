@@ -4,7 +4,7 @@ from typing import Any
 
 import torch
 from lightning import LightningDataModule
-from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 
@@ -132,12 +132,21 @@ class MNISTDataModule(LightningDataModule):
             assert self.hparams["data_dir"] is not None
             trainset = MNIST(self.hparams["data_dir"], train=True, transform=self.transforms)
             testset = MNIST(self.hparams["data_dir"], train=False, transform=self.transforms)
-            dataset: ConcatDataset = ConcatDataset(datasets=[trainset, testset])
-            self.data_train, self.data_val, self.data_test = random_split(
-                dataset=dataset,
-                lengths=self.hparams["train_val_test_split"],
+            # NB: the official test split is kept as-is: train and validation are carved out of
+            # the *training* split only. Concatenating train+test and re-splitting the whole
+            # thing would leak the vast majority of the test images into training and make the
+            # reported test accuracy meaningless.
+            n_train, n_val = self.hparams["train_val_test_split"][:2]
+            n_test = self.hparams["train_val_test_split"][2]
+            assert n_test == len(testset), (
+                f"train_val_test_split expects a test size of {len(testset)} for MNIST, got {n_test}"
+            )
+            self.data_train, self.data_val = random_split(
+                dataset=trainset,
+                lengths=[n_train, n_val],
                 generator=torch.Generator().manual_seed(42),
             )
+            self.data_test = testset
 
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.

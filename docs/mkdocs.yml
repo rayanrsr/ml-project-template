@@ -1,22 +1,17 @@
 site_name: Machine Learning Project Template Documentation
 site_description: Documentation
 site_author: Rayan Samy Ramoul
-# site_url: #TODO: Fill when deployment CI added
+site_url: https://rayanrsr.github.io/ml-project-template/
 site_dir: ../public
-repo_url: https://github.com/rayanramoul/ml-project-template
-edit_uri: blob/main/docs/
+repo_url: https://github.com/rayanrsr/ml-project-template
+edit_uri: blob/master/docs/
 docs_dir: .
 
 
 theme:
   name: "material"
-  features:
-    - search.suggest
-    - search.highlight
-    - search.share
   icon:
     repo: fontawesome/brands/github
-    language: en
   palette:
     - scheme: default
       primary: white
@@ -31,19 +26,18 @@ theme:
         icon: material/weather-night
         name: Switch to light mode
   features:
+    - search.suggest # smart suggestion
+    - search.highlight # highlight search result
+    - search.share # share button
     - navigation.tracking # the URL is automatically updated with the active anchor
     - navigation.sections # top-level sections are rendered as groups in the sidebar
     - navigation.tabs # horizontal tabs at the top of the page
     - navigation.tabs.sticky # navigation tabs will lock below the header and always remain visible when scrolling
     - navigation.indexes # documents can be directly attached to sections
-    - search.highlight # highlight search result
-    - search.share # share button
-    - search.suggest # smart suggestion
+    - navigation.top
     - toc.integrate
     - toc.follow
     - content.code.annotate
-    - navigation.tabs
-    - navigation.top
 
 markdown_extensions:
   - attr_list
@@ -75,9 +69,6 @@ markdown_extensions:
 plugins:
   - mkdocstrings:
       default_handler: python
-      import:
-        - https://docs.python-requests.org/en/master/objects.inv
-      load_external_modules: true
       handlers:
         python:
           paths: [.., ../src]

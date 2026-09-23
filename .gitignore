@@ -1,24 +1,39 @@
+# Environment
+.env
+.venv/
 **/conda
 **/conda_environments
+
+# Caches
+**/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runs and outputs (hydra writes them in the project root, see configs/hydra/default.yaml)
+.hydra/
+.hydra_logs/
+checkpoints/
+logs/
+**/logs/
+*lightning_logs*
+*config_tree*
+**/*.log
+client.py # LitServe writes an example client on startup
+public/
+site/
 **/.neptune
-**/logs
+**/old
 **/tmp
 **/tmp*
+
+# Data and artifacts
+# (only the contents: data/.gitkeep is tracked so the folder exists in fresh clones)
+data/*
+!data/.gitkeep
 **/*.csv
 **/*.ckpt
-*lightning_logs*
-.hydra_logs/
-.hydra/
-**/*.log
-**/old
-**pycache**
-.ruff_cache
+*.sqlite
+*egg-info**
 notebooks/*.ipynb
 notebooks/*.ipynb_checkpoints
-data/**
-public/**
-site/**
-logs/**
-*config_tree*
-client.py
-*egg-info**

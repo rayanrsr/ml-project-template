@@ -3,14 +3,16 @@
 # https://docs.docker.com/go/compose-spec-reference/
 
 # Here the instructions define your application as a service called "server".
-# This service is built from the Dockerfile in the current directory.
+# This service is built from the Dockerfile in ../build.
 # You can add other services your application may depend on here, such as a
 # database or a cache. For examples, see the Awesome Compose repository:
 # https://github.com/docker/awesome-compose
 services:
   server:
     build:
-      context: .
+      # the build context is the repository root, the Dockerfile lives in build/
+      context: ..
+      dockerfile: Dockerfile
     ports:
       - 8000:8000
 # The commented out section below is an example of how to define a PostgreSQL
